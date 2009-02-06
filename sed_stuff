@@ -1,0 +1,7 @@
+# These were used to grab links to a site: search in google for use in httpdconf rewrite rules
+
+# use this to split up the html from a google search results page
+gsed -e :a -e 's/\(<\/[^>]*>\)/\1\n/g;s/\(<br>\)/\1\n/g' 
+
+# And grab the links
+sed -n '/<cite>/p;s/<cite>\(.*\)<\/cite>/\1/g' 
