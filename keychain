@@ -1,0 +1,35 @@
+#!/bin/bash
+
+# 
+# Takes a keychain application name and spits out password to clipboard
+#
+
+getpw()
+{
+    pwline=$(security find-generic-password -g -s $1 2>&1) # read the pw 
+
+    if [ $? -eq "44" ]; then # no such application
+        echo "could not find $1" >&2 ;
+        exit 1;
+    fi
+    
+    # strip shite other than pw
+    echo $pwline | awk '{ print $2 }' | sed 's/\"//g'
+}
+
+unlock-keychain()
+{
+    
+    `security unlock-keychain -p '' 2> /dev/null`
+    if [ $? -eq "51" ]; then # need to prompt for pw
+        security unlock-keychain
+    fi  
+}
+
+if [ -z "$1" ]; then
+    echo "usage: `basename $0` <application>" >&2;
+    exit 1;
+fi
+
+unlock-keychain # ensure unlocked first
+getpw $1 | pbcopy # copy password to clipboard
