@@ -1,0 +1,73 @@
+#!/bin/bash
+
+#
+# Script to create a server based copy of a local git repository
+# and add it as a remote to the current git checkout.
+#
+
+function usage(){
+cat << EOF
+usage: createrepo [OPTIONS]
+
+OPTIONS:
+  -h: this help message
+  -r: remote name to use (defaults to origin)
+  -s: server name to connect to (defaults to code)
+  -k: ssh key to use (defaults to ~/.ssh/id_rsa)
+EOF
+}
+
+delete=false
+
+remote_name=origin
+server=code
+ssh_key=~/.ssh/id_rsa
+git_user=git
+repo_name=${PWD##*/}.git
+
+if [ ! -d '.git' ]; then
+  echo "Working directory is not a git repository.";
+  echo "Please run this script from inside a local checkout"
+  exit 0;
+fi
+
+while getopts "hr:s:k:d" option
+do
+  case $option in
+    h) usage
+      exit 1
+    ;;
+    r) remote_name=$OPTARG
+    ;;
+    s) server=$OPTARG
+    ;;
+    k) ssh_key=$OPTARG
+    ;;
+    *)
+  esac
+done
+
+# create the remote repository on our server of choice
+run_command="cd ~ && mkdir $repo_name && cd $repo_name && git --bare init"
+if ssh -i$ssh_key $git_user@$server $run_command 1>/dev/null; then
+  echo "repository successfully created, adding remote to current checkout"
+else
+  echo "Exiting..."
+  exit 1
+fi
+
+# add it as a remote 
+if git remote add $remote_name $git_user@$server:$repo_name; then
+  echo "Remote $remote_name added successfully"
+else
+  echo "Exiting..."
+  exit 1
+fi
+
+# and push to it
+if git push $remote_name master; then
+  exit 0
+else
+  echo "Exiting..."
+  exit 1
+fi
