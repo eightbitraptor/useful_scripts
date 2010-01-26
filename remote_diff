@@ -1,0 +1,13 @@
+#!/bin/bash
+
+path1=`echo $1 | awk -F, '{print $1}'`/$2
+path2=`echo $1 | awk -F, '{print $2}'`/$2
+
+if `curl -Ss $path1 | file - | grep text`; then
+	diff <(curl -Ss $path1) <(curl -Ss $path2)
+else
+	diff <(curl -Ss $path1 | md5) <(curl -Ss $path2 | md5)
+fi
+		
+
+
