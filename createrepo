@@ -14,6 +14,9 @@ OPTIONS:
   -r: remote name to use (defaults to origin)
   -s: server name to connect to (defaults to code)
   -k: ssh key to use (defaults to ~/.ssh/id_rsa)
+  -l: use a folder on the local machine
+      (use the location where you want your repos to live as the argument
+      eg. /home/someguy/git)
 EOF
 }
 
@@ -25,13 +28,13 @@ ssh_key=~/.ssh/id_rsa
 git_user=git
 repo_name=${PWD##*/}.git
 
-if [ ! -d '.git' ]; then
+if [[ ! -d '.git' ]]; then
   echo "Working directory is not a git repository.";
   echo "Please run this script from inside a local checkout"
   exit 0;
 fi
 
-while getopts "hr:s:k:d" option
+while getopts "hr:s:k:l:d" option
 do
   case $option in
     h) usage
@@ -43,31 +46,40 @@ do
     ;;
     k) ssh_key=$OPTARG
     ;;
+    l) local_repo=$OPTARG
+    ;;
     *)
   esac
 done
 
-# create the remote repository on our server of choice
-run_command="cd ~ && mkdir $repo_name && cd $repo_name && git --bare init"
-if ssh -i$ssh_key $git_user@$server $run_command 1>/dev/null; then
-  echo "repository successfully created, adding remote to current checkout"
-else
-  echo "Exiting..."
-  exit 1
-fi
 
-# add it as a remote 
-if git remote add $remote_name $git_user@$server:$repo_name; then
-  echo "Remote $remote_name added successfully"
-else
-  echo "Exiting..."
-  exit 1
-fi
+if [[ $local_repo == "" ]];then
+  # create the remote repository on our server of choice
+  run_command="cd ~ && mkdir $repo_name && cd $repo_name && git --bare init"
+  if ssh -i$ssh_key $git_user@$server $run_command 1>/dev/null; then
+    echo "repository successfully created, adding remote to current checkout"
+  else
+    echo "Exiting..."
+    exit 1
+  fi
 
-# and push to it
-if git push $remote_name master; then
-  exit 0
+  if git remote add $remote_name $git_user@$server:$repo_name; then
+    echo "Remote $remote_name added successfully"
+  else
+    echo "Exiting..."
+    exit 1
+  fi
+
+  # and push to it
+  if git push --set-upstream $remote_name master; then
+    exit 0
+  else
+    echo "Exiting..."
+    exit 1
+  fi
 else
-  echo "Exiting..."
-  exit 1
+  old_pwd=`pwd`
+  mkdir -p $local_repo/$repo_name && cd $local_repo/$repo_name && git --bare init && cd $old_pwd
+  git remote add $remote_name $local_repo/$repo_name
+  git push --set-upstream $remote_name master
 fi
