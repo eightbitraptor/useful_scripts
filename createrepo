@@ -79,7 +79,24 @@ if [[ $local_repo == "" ]];then
   fi
 else
   old_pwd=`pwd`
-  mkdir -p $local_repo/$repo_name && cd $local_repo/$repo_name && git --bare init && cd $old_pwd
-  git remote add $remote_name $local_repo/$repo_name
-  git push --set-upstream $remote_name master
+  if mkdir -p $local_repo/$repo_name && cd $local_repo/$repo_name && git --bare init && cd $old_pwd; then
+    echo "created repository, adding remote to current checkout"
+  else
+    echo "Exiting..."
+    exit 1
+  fi
+
+  if git remote add $remote_name $local_repo/$repo_name; then
+    echo "added remote"
+  else
+    echo "Exiting..."
+    exit 1
+  fi
+
+  if git push --set-upstream $remote_name master; then
+    exit 0
+  else
+    echo "Exiting..."
+    exit 1
+  fi
 fi
